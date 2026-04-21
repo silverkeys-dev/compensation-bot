@@ -1,0 +1,1 @@
+Fixed ticket creation race condition, added DirectMessages intent for reliable DMs, changed "Bunji" typo to "Bunni", added /force_close_ticket command for admins, reduced auto-close timeout from 5 minutes to 1 minute.

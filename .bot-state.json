@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "desired_state": "running",
+  "stopped_by_user": false,
+  "stopped_at": null,
+  "last_started_at": "2026-04-19T16:26:40.844Z",
+  "restart_count": 0,
+  "last_restart_at": null,
+  "last_health_check": null,
+  "health_status": "unknown",
+  "pid": null,
+  "manager": "pm2",
+  "debug_mode": false
+}

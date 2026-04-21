@@ -1,0 +1,16 @@
+{
+  "name": "rebuild",
+  "description": "Complete rebuild cycle: local build + Docker image rebuild + container restart for bot-manager managed containers",
+  "version": "1.0.0",
+  "author": {
+    "name": "Claude Code"
+  },
+  "license": "MIT",
+  "keywords": [
+    "claude-skill",
+    "rebuild",
+    "docker",
+    "containers",
+    "bot-manager"
+  ]
+}
