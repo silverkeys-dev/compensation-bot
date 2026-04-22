@@ -18,6 +18,7 @@ import {
 } from '../utils/helpers';
 import loadConfig from '../utils/config';
 import canSubmitTicket from '../utils/rateLimit';
+import { popTopKey, getKeyMode } from '../utils/keyManager';
 import logger from '../utils/logger';
 // Configurable delay before closing ticket channels
 // Delay is defined in milliseconds; also expose minutes for user-facing messages
@@ -339,17 +340,29 @@ async function handleApproveTicket(interaction: ButtonInteraction): Promise<void
   }
 
   try {
+    // Pop a key from the active key file
+    const compensationKey = popTopKey();
+    if (!compensationKey) {
+      const keyMode = getKeyMode();
+      await interaction.reply({
+        content: `❌ No compensation keys available in **${keyMode.mode.toUpperCase()}** mode. Please add keys to the key file before approving.`,
+        ephemeral: true
+      });
+      return;
+    }
+
     // Update ticket status
     await db.updateTicketStatus(ticketId, 'approved', user.id);
 
-    // Send DM to user
+    // Send DM to user with compensation key
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
-    const approvalMessage = createApprovalMessage(ticket, config.discord_invite, config.redemption_instructions);
+    const ticketChannelId = interaction.channelId;
+    const approvalMessage = createApprovalMessage(ticket, compensationKey, ticketChannelId);
     await sendDMOrFallback(discordUser, approvalMessage, interaction.channel as any);
 
     // Update interaction
       await interaction.update({
-        content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
+        content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Key (\`${compensationKey}\`) sent to user. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
         components: []
       });
 
@@ -415,13 +428,12 @@ async function handleDenyTicket(interaction: ButtonInteraction): Promise<void> {
   }
 
   try {
-    // Update ticket status (without reason for button interaction)
-    await db.updateTicketStatus(ticketId, 'denied', user.id, 'Denied via ticket channel button');
+    // Update ticket status
+    await db.updateTicketStatus(ticketId, 'denied', user.id);
 
     // Send DM to user
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
-    const bunniTicket = ticket as any;
-    const denialMessage = createDenialMessage(bunniTicket.bunni_key || 'Unknown', 'Denied via ticket channel button');
+    const denialMessage = createDenialMessage();
     await sendDMOrFallback(discordUser, denialMessage, interaction.channel as any);
 
     // Update interaction

@@ -152,28 +152,27 @@ export function formatProductList(): { label: string; value: string }[] {
   ];
 }
 
-export function createApprovalMessage(ticket: Ticket, inviteLink: string, instructions: string): string {
+export function createApprovalMessage(ticket: Ticket, compensationKey: string, ticketChannelId: string): string {
   const bunniTicket = ticket as any;
-  return `✅ **Bunni Key Compensation Request Approved**
+  return `:white_check_mark: **Bunni Key Compensation Request Approved**
 
 Your Bunni key compensation request has been approved!
 
-**Key Details:**
+**Your Key Details:**
 - Key Type: ${bunniTicket.key_type?.toUpperCase() || 'Unknown'}
 - Reseller: ${bunniTicket.reseller_name || 'Unknown'}
 
-**Next Steps:**
-1. Join our Discord server: ${inviteLink}
-2. ${instructions}
-3. Mention your ticket ID: #${ticket.ticket_id}
+**Your compensation key:**
+\`\`\`${compensationKey}\`\`\`
+Please check the compensation channel <#${ticketChannelId}> for more information on how to use this key.
 
 Thank you for your patience!`;
 }
 
-export function createDenialMessage(orderId: string, reason?: string): string {
-  return `❌ **Bunni Key Compensation Request Denied**
+export function createDenialMessage(): string {
+  return `:x: **Bunni Key Compensation Request Denied**
 
-Your Bunni key compensation request has been denied.${reason ? `\n\n**Reason:** ${reason}` : ''}
+Your Bunni key compensation request has been denied.
 
 If you believe this is an error, please contact support.`;
 }

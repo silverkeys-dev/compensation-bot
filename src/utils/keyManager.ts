@@ -118,11 +118,47 @@ export function getKeyFilePaths(): { live: string; test: string } {
   };
 }
 
+/**
+ * Pop the topmost key from the active key file
+ * Returns the key string, or null if no keys available
+ */
+export function popTopKey(): string | null {
+  const filePath = getActiveKeyFilePath();
+
+  try {
+    if (!existsSync(filePath)) {
+      logger.warn(`Key file not found: ${filePath}`);
+      return null;
+    }
+
+    const content = readFileSync(filePath, 'utf-8');
+    const keys = content
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter((line: string) => line.length > 0);
+
+    if (keys.length === 0) {
+      logger.warn(`No keys available in ${filePath}`);
+      return null;
+    }
+
+    const key = keys[0];
+    const remaining = keys.slice(1).join('\n');
+    writeFileSync(filePath, remaining + '\n', 'utf-8');
+    logger.info(`Popped top key from ${getKeyMode().mode} file, ${keys.length - 1} keys remaining`);
+    return key;
+  } catch (error) {
+    logger.error(`Failed to pop key from ${filePath}:`, error);
+    return null;
+  }
+}
+
 export default {
   getKeyMode,
   saveKeyMode,
   toggleKeyMode,
   getActiveKeyFilePath,
   readActiveKeys,
-  getKeyFilePaths
+  getKeyFilePaths,
+  popTopKey
 };

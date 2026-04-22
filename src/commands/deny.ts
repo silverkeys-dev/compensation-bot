@@ -18,12 +18,6 @@ export const data = new SlashCommandBuilder()
       .setRequired(true)
       .setAutocomplete(true)
   )
-  .addStringOption(option =>
-    option
-      .setName('reason')
-      .setDescription('The reason for denial')
-      .setRequired(false)
-  )
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -45,7 +39,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 
   const ticketIdStr = interaction.options.getString('ticket_id', true);
-  const reason = interaction.options.getString('reason') || 'No reason provided';
   const ticketId = parseInt(ticketIdStr);
 
   if (isNaN(ticketId)) {
@@ -77,12 +70,11 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   try {
     // Update ticket status
-    await db.updateTicketStatus(ticketId, 'denied', user.id, reason);
+    await db.updateTicketStatus(ticketId, 'denied', user.id);
 
     // Send DM to user
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
-    const bunniTicket = ticket as any;
-    const denialMessage = createDenialMessage(bunniTicket.bunni_key || 'Unknown', reason);
+    const denialMessage = createDenialMessage();
     await sendDMOrFallback(discordUser, denialMessage, interaction.channel as any);
 
     await interaction.reply({
@@ -91,7 +83,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     });
 
     // Log the action
-    logger.info(`Ticket #${ticketId} denied by ${user.tag}, reason: ${reason}`);
+    logger.info(`Ticket #${ticketId} denied by ${user.tag}`);
   } catch (error) {
     logger.error(`Failed to deny ticket #${ticketId}:`, error);
     await interaction.reply({

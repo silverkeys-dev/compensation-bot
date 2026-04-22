@@ -7,6 +7,7 @@ import { getDatabase } from '../database/db';
 import { createApprovalMessage } from '../utils/helpers';
 import loadConfig from '../utils/config';
 import { sendDMOrFallback } from '../utils/helpers';
+import { popTopKey, getKeyMode } from '../utils/keyManager';
 import logger from '../utils/logger';
 
 export const data = new SlashCommandBuilder()
@@ -97,21 +98,33 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 
   try {
+    // Pop a key from the active key file
+    const compensationKey = popTopKey();
+    if (!compensationKey) {
+      const keyMode = getKeyMode();
+      await interaction.reply({
+        content: `❌ No compensation keys available in **${keyMode.mode.toUpperCase()}** mode. Please add keys to the key file before approving.`,
+        ephemeral: true
+      });
+      return;
+    }
+
     // Update ticket status
     await db.updateTicketStatus(ticketId, 'approved', user.id);
 
-    // Send DM to user
+    // Send DM to user with compensation key
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
-    const approvalMessage = createApprovalMessage(ticket, config.discord_invite, config.redemption_instructions);
+    const ticketChannelId = interaction.channelId;
+    const approvalMessage = createApprovalMessage(ticket, compensationKey, ticketChannelId);
     await sendDMOrFallback(discordUser, approvalMessage, interaction.channel as any);
 
     await interaction.reply({
-      content: `✅ Ticket #${ticketId} has been approved. User has been notified.`,
+      content: `✅ Ticket #${ticketId} has been approved. Key (\`${compensationKey}\`) sent to user via DM.`,
       ephemeral: false
     });
 
     // Log the action
-    logger.info(`Ticket #${ticketId} approved by ${user.tag}`);
+    logger.info(`Ticket #${ticketId} approved by ${user.tag}, key: ${compensationKey}`);
   } catch (error) {
     logger.error(`Failed to approve ticket #${ticketId}:`, error);
     await interaction.reply({
