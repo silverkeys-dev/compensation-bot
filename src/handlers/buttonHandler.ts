@@ -19,6 +19,10 @@ import {
 import loadConfig from '../utils/config';
 import canSubmitTicket from '../utils/rateLimit';
 import logger from '../utils/logger';
+// Configurable delay before closing ticket channels
+// Delay is defined in milliseconds; also expose minutes for user-facing messages
+const CHANNEL_CLOSE_DELAY_MS = 1 * 60 * 1000; // 1 minute
+const CHANNEL_CLOSE_DELAY_MINUTES = CHANNEL_CLOSE_DELAY_MS / 60000;
 import {
   getPendingConfirmation,
   clearPendingConfirmation
@@ -344,13 +348,13 @@ async function handleApproveTicket(interaction: ButtonInteraction): Promise<void
     await sendDMOrFallback(discordUser, approvalMessage, interaction.channel as any);
 
     // Update interaction
-    await interaction.update({
-      content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Closing channel in 5 minutes...`,
-      components: []
-    });
+      await interaction.update({
+        content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
+        components: []
+      });
 
-    // Close channel after 5 minutes
-    setTimeout(async () => {
+      // Close channel after configured delay
+      setTimeout(async () => {
       try {
         const channel = interaction.channel;
         if (channel && channel.type === ChannelType.GuildText) {
@@ -360,7 +364,7 @@ async function handleApproveTicket(interaction: ButtonInteraction): Promise<void
       } catch (error) {
         logger.error('Failed to delete ticket channel:', error);
       }
-    }, 1 * 60 * 1000);
+      }, CHANNEL_CLOSE_DELAY_MS);
 
     logger.info(`Ticket #${ticketId} approved by ${user.tag}`);
   } catch (error) {
@@ -421,13 +425,13 @@ async function handleDenyTicket(interaction: ButtonInteraction): Promise<void> {
     await sendDMOrFallback(discordUser, denialMessage, interaction.channel as any);
 
     // Update interaction
-    await interaction.update({
-      content: `❌ Ticket #${ticketId} has been denied by ${user.tag}. Closing channel in 5 minutes...`,
-      components: []
-    });
+      await interaction.update({
+        content: `❌ Ticket #${ticketId} has been denied by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
+        components: []
+      });
 
-    // Close channel after 5 minutes
-    setTimeout(async () => {
+      // Close channel after configured delay
+      setTimeout(async () => {
       try {
         const channel = interaction.channel;
         if (channel && channel.type === ChannelType.GuildText) {
@@ -437,7 +441,7 @@ async function handleDenyTicket(interaction: ButtonInteraction): Promise<void> {
       } catch (error) {
         logger.error('Failed to delete ticket channel:', error);
       }
-    }, 1 * 60 * 1000);
+      }, CHANNEL_CLOSE_DELAY_MS);
 
     logger.info(`Ticket #${ticketId} denied by ${user.tag}`);
   } catch (error) {
@@ -498,13 +502,13 @@ async function handleCancelTicket(interaction: ButtonInteraction): Promise<void>
     await sendDMOrFallback(discordUser, cancellationMessage, interaction.channel as any);
 
     // Update interaction
-    await interaction.update({
-      content: `⚪ Ticket #${ticketId} has been cancelled by ${user.tag}. Closing channel in 5 minutes...`,
-      components: []
-    });
+      await interaction.update({
+        content: `⚪ Ticket #${ticketId} has been cancelled by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
+        components: []
+      });
 
-    // Close channel after 5 minutes
-    setTimeout(async () => {
+      // Close channel after configured delay
+      setTimeout(async () => {
       try {
         const channel = interaction.channel;
         if (channel && channel.type === ChannelType.GuildText) {
@@ -514,7 +518,7 @@ async function handleCancelTicket(interaction: ButtonInteraction): Promise<void>
       } catch (error) {
         logger.error('Failed to delete ticket channel:', error);
       }
-    }, 1 * 60 * 1000);
+      }, CHANNEL_CLOSE_DELAY_MS);
 
     logger.info(`Ticket #${ticketId} cancelled by ${user.tag}`);
   } catch (error) {

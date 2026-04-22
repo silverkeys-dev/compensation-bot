@@ -18,6 +18,7 @@ import viewCommand from './commands/view';
 import statsCommand from './commands/stats';
 import purgeCommand from './commands/purge';
 import forceCloseCommand from './commands/force_close';
+import toggleLiveCommand from './commands/toggle_live';
 
 // Load environment variables
 dotenv.config();
@@ -61,6 +62,7 @@ commands.set(viewCommand.data.name, viewCommand);
 commands.set(statsCommand.data.name, statsCommand);
 commands.set(purgeCommand.data.name, purgeCommand);
 commands.set(forceCloseCommand.data.name, forceCloseCommand);
+commands.set(toggleLiveCommand.data.name, toggleLiveCommand);
 
 // Register slash commands with Discord
 async function registerCommands(): Promise<void> {

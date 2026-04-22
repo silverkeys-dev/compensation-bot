@@ -28,3 +28,4 @@ Thumbs.db
 
 # Config (contains sensitive IDs)
 config/compensation_config.json
+*.txt
