@@ -4,8 +4,8 @@ import logger from './logger';
 
 const STATE_FILE = join(process.cwd(), 'config', 'key_mode.json');
 
-const LIVE_KEYS_PATH = join(process.cwd(), '..', 'bots', 'silverkeysbot', 'live_keys.txt');
-const TEST_KEYS_PATH = join(process.cwd(), '..', 'bots', 'silverkeysbot', 'test_keys.txt');
+const LIVE_KEYS_PATH = join(process.cwd(), 'data', 'live_keys.txt');
+const TEST_KEYS_PATH = join(process.cwd(), 'data', 'test_keys.txt');
 
 export type KeyMode = 'live' | 'test';
 
