@@ -4,7 +4,10 @@ import {
   Client,
   PermissionOverwrites,
   OAuth2Scopes,
-  ButtonStyle
+  ButtonStyle,
+  ActionRowBuilder,
+  ButtonBuilder,
+  EmbedBuilder
 } from 'discord.js';
 import { getDatabase, TicketData } from '../database/db';
 import { createTicketActionButtons } from '../views/TicketActionView';
@@ -52,6 +55,8 @@ export async function handleButtonInteraction(interaction: ButtonInteraction): P
       await handleDenyTicket(interaction);
     } else if (customId.startsWith('cancel_ticket_')) {
       await handleCancelTicket(interaction);
+    } else if (customId.startsWith('manual_close_')) {
+      await handleManualClose(interaction);
     }
   } catch (error) {
     logger.error('Error handling button interaction:', error);
@@ -292,6 +297,45 @@ async function handleCancelRequest(interaction: ButtonInteraction): Promise<void
   logger.info(`User ${user.tag} cancelled their compensation request`);
 }
 
+/**
+ * Show a manual close button in the ticket channel when DM fails
+ */
+function showManualCloseButton(channel: any, ticketId: number, action: string): void {
+  const embed = new EmbedBuilder()
+    .setColor(0xFFAA00)
+    .setTitle('⚠️ DM Delivery Failed')
+    .setDescription(
+      `The ${action} message could not be sent via DM because the user has DMs disabled.\n` +
+      'The message has been sent in this channel instead.\n\n' +
+      'Once the user has confirmed they have read the message, click the button below to close this channel.'
+    )
+    .setTimestamp();
+
+  const closeButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`manual_close_${ticketId}`)
+      .setLabel('Close Channel')
+      .setStyle(ButtonStyle.Danger)
+  );
+
+  channel.send({ embeds: [embed], components: [closeButton] });
+}
+
+/**
+ * Handle manual close button press
+ */
+async function handleManualClose(interaction: ButtonInteraction): Promise<void> {
+  const channel = interaction.channel;
+  if (!channel || channel.type !== ChannelType.GuildText) return;
+
+  await interaction.reply('🔒 This channel will be deleted in 10 seconds...');
+  setTimeout(() => {
+    channel.delete('Ticket resolved via manual close').catch((error: any) => {
+      logger.error('Failed to delete ticket channel:', error);
+    });
+  }, 10000);
+}
+
 async function handleApproveTicket(interaction: ButtonInteraction): Promise<void> {
   const user = interaction.user;
   const ticketId = parseInt(interaction.customId.replace('approve_ticket_', ''));
@@ -356,28 +400,36 @@ async function handleApproveTicket(interaction: ButtonInteraction): Promise<void
 
     // Send DM to user with compensation key
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
-    const ticketChannelId = interaction.channelId;
-    const approvalMessage = createApprovalMessage(ticket, compensationKey, ticketChannelId);
-    await sendDMOrFallback(discordUser, approvalMessage, interaction.channel as any);
+    const approvalMessage = createApprovalMessage(ticket, compensationKey, config.request_channel_id);
+    const dmSent = await sendDMOrFallback(discordUser, approvalMessage, interaction.channel as any);
 
-    // Update interaction
+    if (dmSent) {
+      // DM succeeded — auto-close channel
       await interaction.update({
-        content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Key (\`${compensationKey}\`) sent to user. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
+        content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Key (\`${compensationKey}\`) sent to user via DM. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
         components: []
       });
 
-      // Close channel after configured delay
       setTimeout(async () => {
-      try {
-        const channel = interaction.channel;
-        if (channel && channel.type === ChannelType.GuildText) {
-          await channel.send('🔒 This channel will be deleted in 10 seconds...');
-          setTimeout(() => channel.delete('Ticket resolved'), 10000);
+        try {
+          const channel = interaction.channel;
+          if (channel && channel.type === ChannelType.GuildText) {
+            await channel.send('🔒 This channel will be deleted in 10 seconds...');
+            setTimeout(() => channel.delete('Ticket resolved'), 10000);
+          }
+        } catch (error) {
+          logger.error('Failed to delete ticket channel:', error);
         }
-      } catch (error) {
-        logger.error('Failed to delete ticket channel:', error);
-      }
       }, CHANNEL_CLOSE_DELAY_MS);
+    } else {
+      // DM failed — show manual close button instead of auto-close
+      await interaction.update({
+        content: `✅ Ticket #${ticketId} has been approved by ${user.tag}. Key (\`${compensationKey}\`) posted in channel (DMs disabled).`,
+        components: []
+      });
+
+      showManualCloseButton(interaction.channel, ticketId, 'approval');
+    }
 
     logger.info(`Ticket #${ticketId} approved by ${user.tag}`);
   } catch (error) {
@@ -434,26 +486,35 @@ async function handleDenyTicket(interaction: ButtonInteraction): Promise<void> {
     // Send DM to user
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
     const denialMessage = createDenialMessage();
-    await sendDMOrFallback(discordUser, denialMessage, interaction.channel as any);
+    const dmSent = await sendDMOrFallback(discordUser, denialMessage, interaction.channel as any);
 
-    // Update interaction
+    if (dmSent) {
+      // DM succeeded — auto-close channel
       await interaction.update({
         content: `❌ Ticket #${ticketId} has been denied by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
         components: []
       });
 
-      // Close channel after configured delay
       setTimeout(async () => {
-      try {
-        const channel = interaction.channel;
-        if (channel && channel.type === ChannelType.GuildText) {
-          await channel.send('🔒 This channel will be deleted in 10 seconds...');
-          setTimeout(() => channel.delete('Ticket resolved'), 10000);
+        try {
+          const channel = interaction.channel;
+          if (channel && channel.type === ChannelType.GuildText) {
+            await channel.send('🔒 This channel will be deleted in 10 seconds...');
+            setTimeout(() => channel.delete('Ticket resolved'), 10000);
+          }
+        } catch (error) {
+          logger.error('Failed to delete ticket channel:', error);
         }
-      } catch (error) {
-        logger.error('Failed to delete ticket channel:', error);
-      }
       }, CHANNEL_CLOSE_DELAY_MS);
+    } else {
+      // DM failed — show manual close button instead of auto-close
+      await interaction.update({
+        content: `❌ Ticket #${ticketId} has been denied by ${user.tag}. Denial message posted in channel (DMs disabled).`,
+        components: []
+      });
+
+      showManualCloseButton(interaction.channel, ticketId, 'denial');
+    }
 
     logger.info(`Ticket #${ticketId} denied by ${user.tag}`);
   } catch (error) {
@@ -514,13 +575,13 @@ async function handleCancelTicket(interaction: ButtonInteraction): Promise<void>
     await sendDMOrFallback(discordUser, cancellationMessage, interaction.channel as any);
 
     // Update interaction
-      await interaction.update({
-        content: `⚪ Ticket #${ticketId} has been cancelled by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
-        components: []
-      });
+    await interaction.update({
+      content: `⚪ Ticket #${ticketId} has been cancelled by ${user.tag}. Closing channel in ${CHANNEL_CLOSE_DELAY_MINUTES} minute(s)...`,
+      components: []
+    });
 
-      // Close channel after configured delay
-      setTimeout(async () => {
+    // Close channel after configured delay
+    setTimeout(async () => {
       try {
         const channel = interaction.channel;
         if (channel && channel.type === ChannelType.GuildText) {
@@ -530,7 +591,7 @@ async function handleCancelTicket(interaction: ButtonInteraction): Promise<void>
       } catch (error) {
         logger.error('Failed to delete ticket channel:', error);
       }
-      }, CHANNEL_CLOSE_DELAY_MS);
+    }, CHANNEL_CLOSE_DELAY_MS);
 
     logger.info(`Ticket #${ticketId} cancelled by ${user.tag}`);
   } catch (error) {

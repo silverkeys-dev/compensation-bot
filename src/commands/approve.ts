@@ -114,8 +114,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     // Send DM to user with compensation key
     const discordUser = await interaction.client.users.fetch(ticket.user_id);
-    const ticketChannelId = interaction.channelId;
-    const approvalMessage = createApprovalMessage(ticket, compensationKey, ticketChannelId);
+    const approvalMessage = createApprovalMessage(ticket, compensationKey, config.request_channel_id);
     await sendDMOrFallback(discordUser, approvalMessage, interaction.channel as any);
 
     await interaction.reply({

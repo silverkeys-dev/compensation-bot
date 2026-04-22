@@ -152,7 +152,7 @@ export function formatProductList(): { label: string; value: string }[] {
   ];
 }
 
-export function createApprovalMessage(ticket: Ticket, compensationKey: string, ticketChannelId: string): string {
+export function createApprovalMessage(ticket: Ticket, compensationKey: string, requestChannelId: string): string {
   const bunniTicket = ticket as any;
   return `:white_check_mark: **Bunni Key Compensation Request Approved**
 
@@ -164,7 +164,7 @@ Your Bunni key compensation request has been approved!
 
 **Your compensation key:**
 \`\`\`${compensationKey}\`\`\`
-Please check the compensation channel <#${ticketChannelId}> for more information on how to use this key.
+Please check the compensation channel <#${requestChannelId}> for more information on how to use this key.
 
 Thank you for your patience!`;
 }
