@@ -1,6 +1,6 @@
 services:
   compensation-bot:
-    build: .
+    image: ghcr.io/silverkeys-dev/compensation-bot:latest
     container_name: compensation-bot
     restart: unless-stopped
     environment:
