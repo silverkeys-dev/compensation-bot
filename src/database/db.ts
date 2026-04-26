@@ -388,6 +388,37 @@ class DatabaseManager {
     });
   }
 
+  getUserMostRecentTicket(userId: string): Promise<Ticket | null> {
+    return new Promise((resolve, reject) => {
+      if (!this.db) {
+        reject(new Error('Database not connected'));
+        return;
+      }
+
+      try {
+        const stmt = this.db.prepare(`
+          SELECT * FROM compensation_tickets
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+          LIMIT 1
+        `);
+        stmt.bind([userId]);
+
+        if (stmt.step()) {
+          const ticket = stmt.getAsObject() as unknown as Ticket;
+          stmt.free();
+          resolve(ticket);
+        } else {
+          stmt.free();
+          resolve(null);
+        }
+      } catch (err) {
+        logger.error(`Failed to get most recent ticket for user ${userId}:`, err);
+        reject(err);
+      }
+    });
+  }
+
   getUserTodayRequestCount(userId: string): Promise<number> {
     return new Promise((resolve, reject) => {
       if (!this.db) {

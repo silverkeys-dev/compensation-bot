@@ -82,6 +82,32 @@ async function handleRequestCompensation(interaction: ButtonInteraction): Promis
     return;
   }
 
+  // Check if user has existing tickets with specific statuses
+  const db = await getDatabase();
+  const mostRecentTicket = await db.getUserMostRecentTicket(user.id);
+
+  if (mostRecentTicket) {
+    // User has previous tickets, check the status
+    if (mostRecentTicket.status === 'approved') {
+      await interaction.reply({
+        content: '❌ You have already received compensation for a previous claim. You cannot submit additional compensation requests.',
+        ephemeral: true
+      });
+      return;
+    }
+
+    if (mostRecentTicket.status === 'denied') {
+      await interaction.reply({
+        content: '❌ Your previous compensation request was denied. You cannot submit additional compensation requests.',
+        ephemeral: true
+      });
+      return;
+    }
+
+    // If status is 'cancelled', allow them to make a new ticket
+    // If status is 'pending', the rate limit check should have caught it
+  }
+
   // Show the compensation request modal (select menus DON'T work in modals!)
   const { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
